@@ -1,0 +1,60 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile data",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["email", "createdAt"]
+    },
+    "QuestionBank": {
+      "title": "Question Bank",
+      "description": "A user's custom question bank.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["userId", "name", "createdAt", "updatedAt"]
+    },
+    "Question": {
+      "title": "Question",
+      "description": "A user's custom question inside a bank.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "bankId": { "type": "string" },
+        "subject": { "type": "string" },
+        "specialty": { "type": "string" },
+        "area": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "text": { "type": "string" },
+        "alternatives": { "type": "array", "items": { "type": "object" } },
+        "explanation": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["userId", "bankId", "text", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles."
+    },
+    "/questionBanks/{bankId}": {
+      "schema": { "$ref": "#/entities/QuestionBank" },
+      "description": "Banks created by users."
+    },
+    "/questions/{questionId}": {
+      "schema": { "$ref": "#/entities/Question" },
+      "description": "Questions nested in banks, but top level collection."
+    }
+  }
+}

@@ -1,0 +1,97 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    function isValidQuestionBank(data) {
+      return data.keys().hasAll(['userId', 'name', 'createdAt', 'updatedAt']) 
+        && data.keys().size() <= 6
+        && data.userId == request.auth.uid
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 200
+        && data.createdAt is number
+        && data.updatedAt is number
+        && data.get('description', '') is string;
+    }
+
+    function isValidQuestion(data) {
+      return data.keys().hasAll(['userId', 'bankId', 'text', 'createdAt', 'updatedAt'])
+        && data.userId == request.auth.uid
+        && data.bankId is string
+        && data.text is string && data.text.size() > 0 && data.text.size() <= 100000
+        && data.createdAt is number
+        && data.updatedAt is number;
+    }
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isSignedIn() && request.auth.uid == userId 
+        && incoming().keys().hasAll(['email', 'createdAt'])
+        && incoming().email == request.auth.token.email
+        && incoming().createdAt == request.time.toMillis();
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    match /users/{userId}/syncState/{chunkId} {
+      allow get, list: if isSignedIn() && request.auth.uid == userId;
+      allow create, update: if isSignedIn() && request.auth.uid == userId
+         && incoming().keys().hasAll(['data', 'updatedAt'])
+         && incoming().data is string
+         && incoming().updatedAt is number;
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    match /questionBanks/{bankId} {
+      allow get: if isSignedIn() && existing().userId == request.auth.uid && isValidId(bankId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      allow create: if isSignedIn() && isValidId(bankId)
+        && isValidQuestionBank(incoming())
+        && incoming().createdAt == request.time.toMillis()
+        && incoming().updatedAt == request.time.toMillis();
+        
+      allow update: if isSignedIn() && isValidId(bankId)
+        && existing().userId == request.auth.uid
+        && isValidQuestionBank(incoming())
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time.toMillis();
+        
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid && isValidId(bankId);
+    }
+
+    match /questions/{questionId} {
+      allow get: if isSignedIn() && existing().userId == request.auth.uid && isValidId(questionId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      allow create: if isSignedIn() && isValidId(questionId)
+        && isValidQuestion(incoming())
+        && incoming().createdAt == request.time.toMillis()
+        && incoming().updatedAt == request.time.toMillis()
+        && exists(/databases/$(database)/documents/questionBanks/$(incoming().bankId));
+        
+      allow update: if isSignedIn() && isValidId(questionId)
+        && existing().userId == request.auth.uid
+        && isValidQuestion(incoming())
+        && incoming().userId == existing().userId
+        && incoming().bankId == existing().bankId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time.toMillis();
+        
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid && isValidId(questionId);
+    }
+  }
+}

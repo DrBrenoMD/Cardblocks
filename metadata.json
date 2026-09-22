@@ -1,0 +1,6 @@
+{
+  "name": "Cardblocks",
+  "description": "Uma aplicação de repetição espaçada onde os flashcards são agrupados em blocos e avaliados juntos, com opção de desmarcar cards individualmente.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
